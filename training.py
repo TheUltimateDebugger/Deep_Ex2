@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 
 from network_structure import Encoder, Decoder
@@ -16,14 +16,21 @@ latent_dim = 16
 channels = 4  # try also 16 for large model
 num_epochs = 10
 batch_size = 128
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 # -------------------------------
 # Dataset
 # -------------------------------
 transform = transforms.ToTensor()
-train_dataset = MNIST(root='./data', train=True, download=True, transform=transform)
+full_dataset = MNIST(root='./data', train=True, download=True, transform=transform)
+train_size = int(0.8 * len(full_dataset))  # 48000
+test_size = len(full_dataset) - train_size  # 12000
+train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 encoder = Encoder(latent_dim=latent_dim, channels=channels).to(device)
 decoder = Decoder(latent_dim=latent_dim, channels=channels).to(device)
 
@@ -47,7 +54,23 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss / len(train_loader):.4f}")
+    avg_train_loss = total_loss / len(train_loader)
+
+    # Validation loop
+    encoder.eval()
+    decoder.eval()
+    val_loss = 0
+    with torch.no_grad():
+        for images, _ in val_loader:
+            images = images.to(device)
+            z, idx1, idx2, shape = encoder(images)
+            recon = decoder(z, idx1, idx2, shape)
+            val_loss += loss_fn(recon, images).item()
+    avg_val_loss = val_loss / len(val_loader)
+
+    print(f"Epoch [{epoch + 1}/{num_epochs}] "
+          f"Train Loss: {avg_train_loss:.4f} "
+          f"Validation Loss: {avg_val_loss:.4f}")
 
 # -------------------------------
 # Optional: Visualize Reconstruction
