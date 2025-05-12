@@ -1,63 +1,40 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-class MLPBasicClassifier(nn.Module):
-    """
-    the basic classifier with the requested layers
-    """
-
-    def __init__(self):
+class Encoder(nn.Module):
+    def __init__(self, latent_dim=16, channels=4):
         super().__init__()
-        self.fc1 = nn.Linear(180, 180)
-        self.fc2 = nn.Linear(180, 180)
-        self.output = nn.Linear(180, 7)
+        self.conv1 = nn.Conv2d(1, channels, kernel_size=3, padding=1)
+        self.pool1 = nn.MaxPool2d(2, stride=2, return_indices=True)
+        self.conv2 = nn.Conv2d(channels, channels * 2, kernel_size=3, padding=1)
+        self.pool2 = nn.MaxPool2d(2, stride=2, return_indices=True)
+        self.fc = nn.Linear((channels * 2) * 7 * 7, latent_dim)
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.relu(self.conv1(x))
+        x, idx1 = self.pool1(x)
+        x = F.relu(self.conv2(x))
+        x, idx2 = self.pool2(x)
+        shape = x.size()
+        x = torch.flatten(x, 1)
+        z = self.fc(x)
+        return z, idx1, idx2, shape
 
-        return self.output(x)
-
-
-class MLPBetterClassifier(nn.Module):
-    """
-    the improved classifier we made
-    """
-
-    def __init__(self):
+class Decoder(nn.Module):
+    def __init__(self, latent_dim=16, channels=4):
         super().__init__()
-        self.fc1 = nn.Linear(180, 256)
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 32)
-        self.output = nn.Linear(32, 7)
+        self.fc = nn.Linear(latent_dim, (channels * 2) * 7 * 7)
+        self.unpool2 = nn.MaxUnpool2d(2, stride=2)
+        self.deconv2 = nn.Conv2d(channels * 2, channels, kernel_size=3, padding=1)
+        self.unpool1 = nn.MaxUnpool2d(2, stride=2)
+        self.deconv1 = nn.Conv2d(channels, 1, kernel_size=3, padding=1)
 
-    def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-
-        return self.output(x)
-
-
-class LinearClassifier(nn.Module):
-    """
-    the improved classifier with all the none linear components removed
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.fc1 = nn.Linear(180, 256)
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 32)
-        self.output = nn.Linear(32, 7)
-
-    def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-
-        return self.output(x)
+    def forward(self, z, idx1, idx2, shape):
+        x = self.fc(z)
+        x = x.view(shape)
+        x = self.unpool2(x, idx2)
+        x = F.relu(self.deconv2(x))
+        x = self.unpool1(x, idx1)
+        x = torch.sigmoid(self.deconv1(x))
+        return x
