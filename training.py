@@ -13,8 +13,8 @@ from network_structure import Encoder, Decoder
 # Configuration
 # -------------------------------
 latent_dim = 16
-channels = 4  # try also 16 for large model
-num_epochs = 50
+channels = 4
+num_epochs = 20
 batch_size = 128
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,11 +35,11 @@ val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 # -------------------------------
 # Training Function
 # -------------------------------
-def train_autoencoder(latent_dim):
+def train_autoencoder(latent_dim, channels):
     encoder = Encoder(latent_dim=latent_dim, channels=channels).to(device)
     decoder = Decoder(latent_dim=latent_dim, channels=channels).to(device)
     params = list(encoder.parameters()) + list(decoder.parameters())
-    optimizer = optim.Adam(params, lr=1e-2)
+    optimizer = optim.Adam(params, lr=1e-3)
     loss_fn = nn.L1Loss()
 
     train_losses = []
@@ -61,7 +61,6 @@ def train_autoencoder(latent_dim):
         avg_train_loss = total_loss / len(train_loader)
         train_losses.append(avg_train_loss)
 
-        # Validation
         encoder.eval()
         decoder.eval()
         val_loss = 0
@@ -74,30 +73,40 @@ def train_autoencoder(latent_dim):
         avg_val_loss = val_loss / len(val_loader)
         val_losses.append(avg_val_loss)
 
-        print(f"Latent {latent_dim} | Epoch [{epoch+1}/{num_epochs}] "
-              f"Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
+        print(f"[latent={latent_dim}, channels={channels}] "
+              f"Epoch {epoch+1}/{num_epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
 
     return train_losses, val_losses
 
 # -------------------------------
-# Train Both Models
+# Train All 4 Models
 # -------------------------------
-train_16, val_16 = train_autoencoder(latent_dim=16)
-train_4, val_4 = train_autoencoder(latent_dim=4)
+configs = [(4, 4), (4, 16), (16, 4), (16, 16)]
+losses = {}
+
+for latent_dim, channels in configs:
+    train_l, val_l = train_autoencoder(latent_dim, channels)
+    key = f"d={latent_dim},c={channels}"
+    losses[key] = {'train': train_l, 'val': val_l}
 
 # -------------------------------
-# Plot Loss Curves
+# Plot All Loss Curves (Log Scale)
 # -------------------------------
-plt.figure(figsize=(10, 5))
-plt.plot(train_16, label='Train Loss (d=16)')
-plt.plot(val_16, label='Val Loss (d=16)')
-plt.plot(train_4, label='Train Loss (d=4)')
-plt.plot(val_4, label='Val Loss (d=4)')
-plt.title('Training and Validation Loss for d=16 and d=4')
-plt.xlabel('Epoch')
-plt.ylabel('L1 Loss')
-plt.legend()
+plt.figure(figsize=(12, 6))
+colors = plt.cm.tab10.colors  # 10 distinct colors
+model_keys = list(losses.keys())
+
+for i, key in enumerate(model_keys):
+    color = colors[i % len(colors)]
+    plt.plot(losses[key]['train'], label=f"Train {key}", color=color)
+    plt.plot(losses[key]['val'], linestyle='--', label=f"Val {key}", color=color)
+
 plt.yscale('log')
+plt.xlabel("Epoch")
+plt.ylabel("L1 Loss")
+plt.title("Train and Validation Loss (log scale)")
+plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
