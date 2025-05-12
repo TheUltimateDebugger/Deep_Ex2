@@ -14,7 +14,7 @@ from network_structure import Encoder, Decoder
 # -------------------------------
 latent_dim = 16
 channels = 4  # try also 16 for large model
-num_epochs = 40
+num_epochs = 50
 batch_size = 128
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -31,12 +31,6 @@ train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size]
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-encoder = Encoder(latent_dim=latent_dim, channels=channels).to(device)
-decoder = Decoder(latent_dim=latent_dim, channels=channels).to(device)
-
-params = list(encoder.parameters()) + list(decoder.parameters())
-optimizer = optim.Adam(params, lr=1e-3)
-loss_fn = nn.L1Loss()
 
 # -------------------------------
 # Training Function
@@ -45,7 +39,7 @@ def train_autoencoder(latent_dim):
     encoder = Encoder(latent_dim=latent_dim, channels=channels).to(device)
     decoder = Decoder(latent_dim=latent_dim, channels=channels).to(device)
     params = list(encoder.parameters()) + list(decoder.parameters())
-    optimizer = optim.Adam(params, lr=1e-3)
+    optimizer = optim.Adam(params, lr=1e-2)
     loss_fn = nn.L1Loss()
 
     train_losses = []
