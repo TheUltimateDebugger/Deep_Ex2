@@ -76,7 +76,7 @@ def train_autoencoder(latent_dim, channels):
         print(f"[latent={latent_dim}, channels={channels}] "
               f"Epoch {epoch+1}/{num_epochs} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}")
 
-    return train_losses, val_losses
+    return encoder, decoder, train_losses, val_losses
 
 # -------------------------------
 # Train All 4 Models
@@ -85,9 +85,13 @@ configs = [(4, 4), (4, 16), (16, 4), (16, 16)]
 losses = {}
 
 for latent_dim, channels in configs:
-    train_l, val_l = train_autoencoder(latent_dim, channels)
+    encoder, decoder, train_l, val_l = train_autoencoder(latent_dim, channels)
     key = f"d={latent_dim},c={channels}"
     losses[key] = {'train': train_l, 'val': val_l}
+
+    # Save trained models
+    torch.save(encoder.state_dict(), f"encoder_{key}.pth")
+    torch.save(decoder.state_dict(), f"decoder_{key}.pth")
 
 # -------------------------------
 # Plot All Loss Curves (Log Scale)
