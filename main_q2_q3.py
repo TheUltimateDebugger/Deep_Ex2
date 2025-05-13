@@ -6,7 +6,6 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, random_split, Subset
 import matplotlib.pyplot as plt
 import random
-
 import q3_training
 from network_structure import Encoder
 from q2_classification_model import ClassifierHead
