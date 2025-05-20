@@ -7,7 +7,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 
-from network_structure import Encoder, Decoder
+from q1_network_structure import Encoder, Decoder
 from q2_classification_model import ClassifierHead
 import random
 import matplotlib.pyplot as plt
@@ -87,10 +87,9 @@ def train_model(encoder, classifier_head, train_loader, test_loader, optimizer, 
 
         test_losses.append(test_loss / len(test_loader))
         test_accs.append(correct / total)
-
         print(f"[Epoch {epoch+1}/{epochs}] Train Loss: {train_losses[-1]:.4f} | Test Loss: {test_losses[-1]:.4f}")
 
-    return train_losses, train_accs, test_losses, test_accs
+    return train_losses, train_accs, test_losses, test_accs, encoder, classifier_head
 
 
 def show_predictions_dual(encoder1, classifier1, encoder2, classifier2, test_loader, class_names=None, num_examples=8, device='cpu', explanation =""):

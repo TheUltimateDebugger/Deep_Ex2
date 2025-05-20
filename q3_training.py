@@ -7,7 +7,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 
-from network_structure import Encoder, Decoder
+from q1_network_structure import Encoder, Decoder
 from q2_classification_model import ClassifierHead
 import random
 import matplotlib.pyplot as plt

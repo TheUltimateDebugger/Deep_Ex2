@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, random_split, Subset
 import matplotlib.pyplot as plt
 import random
 import q3_training
-from network_structure import Encoder
+from q1_network_structure import Encoder
 from q2_classification_model import ClassifierHead
 from train_q2 import train_model, plot_results, show_predictions_dual
 
@@ -32,7 +32,7 @@ classifier_all = ClassifierHead(latent_dim=16, num_classes=10)
 optimizer_all = optim.Adam(list(encoder_all.parameters()) + list(classifier_all.parameters()), lr=1e-3)
 train_loader_all = DataLoader(train_dataset, batch_size=128, shuffle=True)
 
-train_losses_all, train_accs_all, test_losses_all, test_accs_all = train_model(
+train_losses_all, train_accs_all, test_losses_all, test_accs_all, trained_encoder, trained_classifier = train_model(
     encoder=encoder_all,
     classifier_head=classifier_all,
     train_loader=train_loader_all,
@@ -43,6 +43,10 @@ train_losses_all, train_accs_all, test_losses_all, test_accs_all = train_model(
     device=device
 )
 
+torch.save(trained_encoder.state_dict(), "encoder_all.pth")
+torch.save(trained_classifier.state_dict(), "classifier_all.pth")
+
+
 # 100-sample model (train encoder)
 subset_indices = random.sample(range(len(train_dataset)), 100)
 small_train_dataset = Subset(train_dataset, subset_indices)
@@ -52,7 +56,7 @@ encoder_100 = Encoder(latent_dim=16, channels=16)
 classifier_100 = ClassifierHead(latent_dim=16, num_classes=10)
 optimizer_100 = optim.Adam(list(encoder_100.parameters()) + list(classifier_100.parameters()), lr=1e-3)
 
-train_losses_100, train_accs_100, test_losses_100, test_accs_100 = train_model(
+train_losses_100, train_accs_100, test_losses_100, test_accs_100, trained_encoder, trained_classifier = train_model(
     encoder=encoder_100,
     classifier_head=classifier_100,
     train_loader=small_train_loader,
@@ -74,7 +78,7 @@ plot_results(
     title_suffix="(Both Training Encoder)"
 )
 
-# 👀 Predictions: All data vs 100
+# Predictions: All data vs 100
 show_predictions_dual(
     encoder1=encoder_all, classifier1=classifier_all,
     encoder2=encoder_100, classifier2=classifier_100,
@@ -122,7 +126,7 @@ plot_results(
     title_suffix="(Same Dataset)"
 )
 
-# 👀 Predictions: Train encoder vs frozen
+# Predictions: Train encoder vs frozen
 show_predictions_dual(
     encoder1=encoder_all, classifier1=classifier_all,
     encoder2=encoder_frozen, classifier2=classifier_frozen,
